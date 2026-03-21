@@ -17,7 +17,7 @@
     "minimum-stability": "dev",
     "require": {
         "fair/composer-plugin": "@dev",
-        "fair/git-updater": "^12.24"
+        "fair/git-updater": "*"
     },
     "config": {
         "allow-plugins": {
@@ -26,7 +26,7 @@
     },
     "extra": {
         "fair-repositories": {
-            "fair-repo": {
+            "fair": {
                 "packages": {
                     "fair/git-updater": "did:plc:afjf7gsjzsqmgc7dlhb553mv"
                 }
