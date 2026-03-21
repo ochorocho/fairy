@@ -1,0 +1,59 @@
+{
+    "@context": "https://fair.pm/ns/metadata/v1",
+    "id": "did:plc:afjf7gsjzsqmgc7dlhb553mv",
+    "type": "wp-plugin",
+    "name": "Git Updater",
+    "slug": "git-updater",
+    "filename": "git-updater/git-updater.php",
+    "description": "A plugin for updating from Git hosts.",
+    "authors": [
+        {
+            "name": "Andy Fragen",
+            "url": "https://thefragens.com"
+        }
+    ],
+    "license": "GPL-3.0-or-later",
+    "keywords": ["packages", "updater"],
+    "last_updated": "2026-03-18T23:52:20Z",
+    "releases": [
+        {
+            "version": "12.24.1",
+            "requires": {
+                "env:php": ">=8.0",
+                "env:wp": ">=5.9"
+            },
+            "suggests": {
+                "env:wp": ">=7.0.4"
+            },
+            "provides": [],
+            "artifacts": {
+                "package": [
+                    {
+                        "url": "https://api.github.com/repos/afragen/git-updater/zipball/12.24.1",
+                        "content-type": "application/zip",
+                        "signature": "zRL37AsydcAr2CZFkM12pL_0lC7al7gT28Dk3f__kOIn6r6xjUwddXcbAHPKw9MThC4TJ_vu928ewvSDIxV_DA",
+                        "checksum": "sha256:8a961a087530195bdb7d7ba491e082fbd3dbf1cbe1f66b6d613e99739e5dfeb1"
+                    }
+                ]
+            }
+        },
+        {
+            "version": "12.24.0",
+            "requires": {
+                "env:php": ">=8.0"
+            },
+            "suggests": {},
+            "provides": [],
+            "artifacts": {
+                "package": [
+                    {
+                        "url": "https://api.github.com/repos/afragen/git-updater/zipball/12.24.0",
+                        "content-type": "application/zip",
+                        "signature": "aPUOllhA_rwDFlWjaNpobX516yWKIcS33bOS2KXLS1ORG1HhRNFjwIJ9TP0NcNj_Sm3gqsRw9ptjot5bcJZ7Dg",
+                        "checksum": "sha256:7cd55c2b74b92fc1235a9830fcf755d31cfc6aa9ac7f2f2940f295265e567d1a"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+{
+    "name": "fair/composer-plugin",
+    "description": "Composer plugin for the FAIR decentralized package management protocol",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "ext-sodium": "*",
+        "ext-gmp": "*",
+        "composer-plugin-api": "^2.3"
+    },
+    "require-dev": {
+        "composer/composer": "^2.7",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fair\\ComposerPlugin\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fair\\ComposerPlugin\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "class": "Fair\\ComposerPlugin\\Plugin"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

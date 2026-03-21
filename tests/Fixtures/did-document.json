@@ -1,0 +1,23 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/multikey/v1"
+    ],
+    "id": "did:plc:afjf7gsjzsqmgc7dlhb553mv",
+    "alsoKnownAs": [],
+    "verificationMethod": [
+        {
+            "id": "did:plc:afjf7gsjzsqmgc7dlhb553mv#fair_93ff45",
+            "type": "Multikey",
+            "controller": "did:plc:afjf7gsjzsqmgc7dlhb553mv",
+            "publicKeyMultibase": "z6MkiAezCpuZLSjo58uTXyXcvKgw3jMf6BvkuVMQ4SYfuFZm"
+        }
+    ],
+    "service": [
+        {
+            "id": "#fairpm_repo",
+            "type": "FairPackageManagementRepo",
+            "serviceEndpoint": "https://fair.git-updater.com/wp-json/fair-beacon/v1/packages/did:plc:afjf7gsjzsqmgc7dlhb553mv"
+        }
+    ]
+}
