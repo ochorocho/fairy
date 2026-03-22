@@ -2,5 +2,6 @@
 /composer.lock
 /.phpunit.cache/
 .idea
-test-instance/vendor
-test-instance/composer.lock
+test-instance/workdir/vendor
+test-instance/workdir/composer.lock
+.DS_Store

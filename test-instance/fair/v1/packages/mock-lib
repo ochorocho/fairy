@@ -1,0 +1,32 @@
+{
+    "id": "https://fair-mapper.ddev.site/fair/v1/packages/mock-lib",
+    "type": "library",
+    "name": "Mock Library",
+    "slug": "mock-lib",
+    "license": "MIT",
+    "description": "A mock FAIR package for local testing of the did:web resolver",
+    "authors": [
+        {
+            "name": "FAIR Test Author",
+            "url": "https://example.com"
+        }
+    ],
+    "keywords": ["mock", "test", "fair", "did-web"],
+    "releases": [
+        {
+            "version": "1.0.0",
+            "artifacts": {
+                "package": [
+                    {
+                        "url": "https://fair-mapper.ddev.site/releases/mock-lib-1.0.0.zip",
+                        "content-type": "application/zip",
+                        "checksum": "sha256:944fdb05cd48683cccf1b43b9e6316a420ca64bb3b1a9316a643712e752a3534"
+                    }
+                ]
+            },
+            "requires": {
+                "env:php": ">=8.1"
+            }
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/multikey/v1"
+    ],
+    "id": "did:web:fair-mapper.ddev.site",
+    "verificationMethod": [
+        {
+            "id": "did:web:fair-mapper.ddev.site#fair_signing",
+            "type": "Multikey",
+            "controller": "did:web:fair-mapper.ddev.site",
+            "publicKeyMultibase": "z6MkwBi77yuGboZwMUoZqQKZyH4RFsE8wivHi3YqUKx9S4TD"
+        }
+    ],
+    "service": [
+        {
+            "id": "#fairpm_repo",
+            "type": "FairPackageManagementRepo",
+            "serviceEndpoint": "https://fair-mapper.ddev.site/fair/v1/packages/mock-lib"
+        }
+    ]
+}
