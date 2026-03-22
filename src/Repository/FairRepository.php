@@ -13,7 +13,7 @@ use Composer\Repository\ArrayRepository;
 use Composer\Util\HttpDownloader;
 use Fair\ComposerPlugin\Cache\FairCache;
 use Fair\ComposerPlugin\Did\DidDocument;
-use Fair\ComposerPlugin\Did\PlcDidResolver;
+use Fair\ComposerPlugin\Did\DidResolver;
 use Fair\ComposerPlugin\Metadata\MetadataDocument;
 use Fair\ComposerPlugin\Metadata\MetadataFetcher;
 use Fair\ComposerPlugin\PackageFactory;
@@ -55,7 +55,7 @@ final class FairRepository extends ArrayRepository
     {
         parent::initialize();
 
-        $resolver = new PlcDidResolver($this->httpDownloader);
+        $resolver = new DidResolver($this->httpDownloader);
         $fetcher = new MetadataFetcher($this->httpDownloader);
         $factory = new PackageFactory();
         $cache = new FairCache($this->composerConfig);
@@ -134,7 +134,7 @@ final class FairRepository extends ArrayRepository
         return $map;
     }
 
-    private function resolveDidDocument(PlcDidResolver $resolver, FairCache $cache, string $did): DidDocument
+    private function resolveDidDocument(DidResolver $resolver, FairCache $cache, string $did): DidDocument
     {
         $cached = $cache->getDidDocument($did);
         if ($cached !== null) {

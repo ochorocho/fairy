@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Fair\ComposerPlugin\Command;
 
 use Composer\Command\BaseCommand;
+use Composer\Factory;
+use Composer\Installer;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
-use Fair\ComposerPlugin\Did\PlcDidResolver;
+use Composer\DependencyResolver\Request;
+use Fair\ComposerPlugin\Did\DidResolver;
 use Fair\ComposerPlugin\Metadata\MetadataFetcher;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +22,7 @@ final class FairRequireCommand extends BaseCommand
     protected function configure(): void
     {
         $this->setName('fair:require')
-            ->setDescription('Require a FAIR package by DID')
+            ->setDescription('Require a FAIR package by its Decentralized Identifier (DID)')
             ->setDefinition([
                 new InputArgument('did', InputArgument::REQUIRED, 'The DID of the package (e.g. did:plc:abc123)'),
                 new InputOption('vendor', null, InputOption::VALUE_REQUIRED, 'Vendor prefix for the package name', 'fair'),
@@ -30,23 +33,27 @@ final class FairRequireCommand extends BaseCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $did = $input->getArgument('did');
-        $vendor = $input->getOption('vendor');
-        $constraint = $input->getOption('constraint');
-        $dryRun = $input->getOption('dry-run');
         $io = $this->getIO();
 
-        if (!str_starts_with($did, 'did:plc:')) {
-            $io->writeError('<error>Invalid DID format. Expected did:plc:...</error>');
+        /** @var string $did */
+        $did = $input->getArgument('did');
+        /** @var string $vendor */
+        $vendor = $input->getOption('vendor');
+        /** @var string $constraint */
+        $constraint = $input->getOption('constraint');
+        $dryRun = (bool) $input->getOption('dry-run');
+
+        if (!DidResolver::isSupported($did)) {
+            $io->writeError('<error>Unsupported DID format. Supported methods: did:plc:, did:web:</error>');
             return 1;
         }
 
-        // Step 1: Resolve DID
-        $io->write(sprintf('<info>Resolving DID %s...</info>', $did));
         $composer = $this->requireComposer();
         $httpDownloader = $composer->getLoop()->getHttpDownloader();
 
-        $resolver = new PlcDidResolver($httpDownloader);
+        // Step 1: Resolve DID
+        $io->write(sprintf('  - Resolving <info>%s</info>...', $did));
+        $resolver = new DidResolver($httpDownloader);
         try {
             $didDocument = $resolver->resolve($did);
         } catch (\Throwable $e) {
@@ -56,34 +63,41 @@ final class FairRequireCommand extends BaseCommand
 
         $serviceEndpoint = $didDocument->getServiceEndpoint();
         if ($serviceEndpoint === null) {
-            $io->writeError('<error>DID has no FairPackageManagementRepo service</error>');
+            $io->writeError('<error>DID has no FairPackageManagementRepo service endpoint.</error>');
             return 1;
         }
 
         // Step 2: Fetch metadata to get slug
-        $io->write(sprintf('<info>Fetching metadata from %s...</info>', $serviceEndpoint));
+        $io->write(sprintf('  - Fetching metadata from <info>%s</info>...', $serviceEndpoint));
         $fetcher = new MetadataFetcher($httpDownloader);
         try {
             $metadata = $fetcher->fetch($serviceEndpoint);
         } catch (\Throwable $e) {
-            $io->writeError(sprintf('<error>Failed to fetch metadata: %s</error>', $e->getMessage()));
+            $io->writeError(sprintf('<error>Failed to fetch FAIR metadata: %s</error>', $e->getMessage()));
             return 1;
         }
 
         $packageName = $vendor . '/' . $metadata->slug;
         $latestVersion = $metadata->releases[0]->version ?? 'unknown';
 
-        $io->write(sprintf('<info>Found package: %s (%s) - %s</info>', $metadata->name, $packageName, $latestVersion));
+        $io->write(sprintf(
+            '  - Found <info>%s</info> (<comment>%s</comment>) — latest: <comment>%s</comment>',
+            $metadata->name,
+            $packageName,
+            $latestVersion,
+        ));
 
         if ($dryRun) {
-            $io->write('<comment>Dry run — no changes made.</comment>');
+            $io->write('');
+            $io->write('<comment>Dry run — no changes written.</comment>');
+            $io->write(sprintf('  repositories: { type: fair, packages: { %s: %s } }', $packageName, $did));
+            $io->write(sprintf('  require:       %s: %s', $packageName, $constraint));
             return 0;
         }
 
         // Step 3: Update composer.json
-        $composerJsonPath = $composer->getConfig()->getConfigSource()->getName();
-        // The config source name is for config, we need the project root composer.json
-        $composerJsonPath = getcwd() . '/composer.json';
+        $composerJsonPath = Factory::getComposerFile();
+        $json = new JsonFile($composerJsonPath);
 
         $contents = file_get_contents($composerJsonPath);
         if ($contents === false) {
@@ -92,39 +106,71 @@ final class FairRequireCommand extends BaseCommand
         }
 
         $manipulator = new JsonManipulator($contents);
+        $decoded = $json->read();
 
-        // Add to extra.fair-repositories
-        $json = json_decode($contents, true);
-        $fairRepos = $json['extra']['fair-repositories'] ?? [];
+        // Find an existing fair repository to append to, or create a new one.
+        $fairRepoIndex = $this->findFairRepositoryIndex($decoded);
 
-        // Find or create a repository entry that contains this DID
-        $repoName = 'fair';
-        $existingPackages = $fairRepos[$repoName]['packages'] ?? [];
-        $existingPackages[$packageName] = $did;
+        if ($fairRepoIndex !== null) {
+            $existingPackages = $decoded['repositories'][$fairRepoIndex]['packages'] ?? [];
+            $existingPackages[$packageName] = $did;
 
-        $fairRepos[$repoName] = ['packages' => $existingPackages];
+            $updatedRepo = $decoded['repositories'][$fairRepoIndex];
+            $updatedRepo['packages'] = $existingPackages;
 
-        $manipulator->addSubNode('extra', 'fair-repositories', $fairRepos);
+            $manipulator->removeListItem('repositories', $fairRepoIndex);
+            $manipulator->addRepository('', $updatedRepo);
+        } else {
+            $manipulator->addRepository('', [
+                'type'     => 'fair',
+                'packages' => [$packageName => $did],
+            ]);
+        }
 
-        // Add to require
         $manipulator->addLink('require', $packageName, $constraint);
 
-        file_put_contents($composerJsonPath, $manipulator->getContents());
-        $io->write(sprintf('<info>Added %s (%s) to composer.json</info>', $packageName, $did));
+        if (false === file_put_contents($composerJsonPath, $manipulator->getContents())) {
+            $io->writeError('<error>Could not write composer.json</error>');
+            return 1;
+        }
 
-        // Step 4: Run composer update as subprocess so it re-reads composer.json
-        $io->write('<info>Running composer update...</info>');
+        $io->write(sprintf(
+            '  - <info>composer.json</info> updated: added <comment>%s</comment> (<comment>%s</comment>)',
+            $packageName,
+            $did,
+        ));
 
-        $composerBin = getenv('COMPOSER_BINARY') ?: (PHP_BINARY . ' ' . escapeshellarg($_SERVER['argv'][0]));
-        $cmd = sprintf(
-            '%s update %s --with-all-dependencies',
-            $composerBin,
-            escapeshellarg($packageName),
-        );
+        // Step 4: Install the new package
+        $io->write('');
+        $io->write(sprintf('Running <info>composer update %s</info>...', $packageName));
+        $io->write('');
 
-        $exitCode = 0;
-        passthru($cmd, $exitCode);
+        $this->resetComposer();
+        $composer = $this->requireComposer();
 
-        return $exitCode;
+        $install = Installer::create($io, $composer);
+        $install
+            ->setUpdate(true)
+            ->setUpdateAllowList([$packageName])
+            ->setUpdateAllowTransitiveDependencies(Request::UPDATE_LISTED_WITH_TRANSITIVE_DEPS);
+
+        return $install->run();
+    }
+
+    /**
+     * Find the array index of an existing "fair" type repository in composer.json,
+     * or null if none exists yet.
+     *
+     * @param array<string, mixed> $decoded
+     */
+    private function findFairRepositoryIndex(array $decoded): ?int
+    {
+        foreach ($decoded['repositories'] ?? [] as $index => $repo) {
+            if (is_array($repo) && ($repo['type'] ?? '') === 'fair') {
+                return (int) $index;
+            }
+        }
+
+        return null;
     }
 }

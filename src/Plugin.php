@@ -15,7 +15,7 @@ use Composer\Plugin\PluginInterface;
 use Composer\Plugin\PostFileDownloadEvent;
 use Composer\Plugin\PreFileDownloadEvent;
 use Fair\ComposerPlugin\Command\FairCommandProvider;
-use Fair\ComposerPlugin\Did\PlcDidResolver;
+use Fair\ComposerPlugin\Did\DidResolver;
 use Fair\ComposerPlugin\Repository\FairRepository;
 use Fair\ComposerPlugin\Security\SignatureVerifier;
 
@@ -29,33 +29,9 @@ final class Plugin implements PluginInterface, EventSubscriberInterface, Capable
         $this->composer = $composer;
         $this->io = $io;
 
-        $extra = $composer->getPackage()->getExtra();
-        $fairConfig = $extra['fair-repositories'] ?? [];
+        $composer->getRepositoryManager()->setRepositoryClass('fair', FairRepository::class);
 
-        if ($fairConfig === []) {
-            $io->debug('FAIR plugin activated: no fair-repositories configured');
-            return;
-        }
-
-        $repositoryManager = $composer->getRepositoryManager();
-        $config = $composer->getConfig();
-        $httpDownloader = $composer->getLoop()->getHttpDownloader();
-
-        foreach ($fairConfig as $name => $repoConfig) {
-            $repoConfig = is_array($repoConfig) ? $repoConfig : [];
-            $io->debug(sprintf('FAIR: Creating repository "%s"', is_string($name) ? $name : 'fair'));
-
-            $repository = new FairRepository(
-                $repoConfig,
-                $io,
-                $config,
-                $httpDownloader,
-            );
-
-            $repositoryManager->addRepository($repository);
-        }
-
-        $io->debug('FAIR plugin activated: registered FAIR repositories');
+        $io->debug('FAIR plugin activated: registered fair repository type');
     }
 
     public function deactivate(Composer $composer, IOInterface $io): void
@@ -111,7 +87,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface, Capable
             );
         }
 
-        $resolver = new PlcDidResolver($this->composer->getLoop()->getHttpDownloader());
+        $resolver = new DidResolver($this->composer->getLoop()->getHttpDownloader());
 
         try {
             $didDocument = $resolver->resolve($did);
@@ -197,7 +173,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface, Capable
         $signature = $fairData['signature'] ?? null;
         $did = $fairData['did'] ?? null;
         if (is_string($signature) && is_string($did)) {
-            $resolver = new PlcDidResolver($this->composer->getLoop()->getHttpDownloader());
+            $resolver = new DidResolver($this->composer->getLoop()->getHttpDownloader());
             $didDocument = $resolver->resolve($did);
 
             if (!$verifier->verifySignature($filePath, $signature, $didDocument)) {
